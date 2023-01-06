@@ -11,7 +11,7 @@ def parse_command_line_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description=(
-            "Example Google Cloud IoT Core MQTT device connection code.")
+            "Omnicore  MQTT device connection code.")
     )
     parser.add_argument(
         "--algorithm",
@@ -22,11 +22,11 @@ def parse_command_line_args():
     parser.add_argument(
         "--ca_certs",
         default="roots.pem",
-        help="CA root from https://pki.google.com/roots.pem",
+        help="CA root from https://pki.cloud.korewireless.com/roots.pem",
     )
-    parser.add_argument(
-        "--cloud_region", default="us-central1", help="GCP cloud region"
-    )
+    # parser.add_argument(
+    #     "--cloud_region", default="us-central1", help="GCP cloud region"
+    # )
     parser.add_argument(
         "--data",
         default="Hello there",
@@ -75,17 +75,16 @@ def parse_command_line_args():
     )
     parser.add_argument(
         "--subscription_id",
-        default=os.environ.get("GOOGLE_CLOUD_PROJECT"),
-        help="GCP cloud project name",
+        help="Omnicore subscription name",
     )
     parser.add_argument(
-        "--registry_id", required=True, help="Cloud IoT Core registry id"
+        "--registry_id", required=True, help="Omnicore registry id"
     )
-    parser.add_argument(
-        "--service_account_json",
-        default=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
-        help="Path to service account json file.",
-    )
+    # parser.add_argument(
+    #     "--service_account_json",
+    #     default=os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"),
+    #     help="Path to service account json file.",
+    # )
 
     # Command subparser
     command = parser.add_subparsers(dest="command")

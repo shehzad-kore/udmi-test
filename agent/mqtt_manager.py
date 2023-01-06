@@ -115,7 +115,6 @@ def on_publish(unused_client, unused_userdata, unused_mid):
 
 def get_client(
     subscription_id,
-    cloud_region,
     registry_id,
     device_id,
     private_key_file,
@@ -182,7 +181,6 @@ class MqttManager:
         self.mqtt_port = args.mqtt_bridge_port
         self.client = get_client(
             args.subscription_id,
-            args.cloud_region,
             args.registry_id,
             args.device_id,
             args.private_key_file,
@@ -262,7 +260,6 @@ def mqtt_device_demo(args):
     jwt_exp_mins = args.jwt_expires_minutes
     client = get_client(
         args.subscription_id,
-        args.cloud_region,
         args.registry_id,
         args.device_id,
         args.private_key_file,
@@ -302,7 +299,6 @@ def mqtt_device_demo(args):
             client.disconnect()
             client = get_client(
                 args.subscription_id,
-                args.cloud_region,
                 args.registry_id,
                 args.device_id,
                 args.private_key_file,
