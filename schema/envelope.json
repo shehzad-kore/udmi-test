@@ -1,0 +1,56 @@
+{
+  "title": "Envelope",
+  "description": "The UDMI `envelope` is not a message itself, per se, but the attributes and other information that is delivered along with a message. [Message Envelope Documentation](../docs/messages/envelope.md)",
+  "additionalProperties": true,
+  "properties": {
+    "deviceId": {
+      "type": "string",
+      "pattern": "^[A-Z]{2,6}-[0-9]{1,6}$"
+    },
+    "deviceNumId": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "deviceRegistryId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z][-a-zA-Z0-9._+~%]*[a-zA-Z0-9]$"
+    },
+    "deviceRegistryLocation": {
+      "type": "string",
+      "pattern": "^[a-z]+-[a-z]+1$"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^([.a-z]+:)?[a-z][-a-z0-9]*[a-z0-9]$"
+    },
+    "subFolder": {
+      "enum": [
+        "update",
+        "audit",
+        "discovery",
+        "system",
+        "gateway",
+        "swarm",
+        "localnet",
+        "pointset",
+        "blobset"
+      ]
+    },
+    "subType": {
+      "enum": [
+        "event",
+        "command",
+        "state",
+        "config",
+        "model"
+      ]
+    }
+  },
+  "required": [
+    "projectId",
+    "deviceRegistryId",
+    "deviceNumId",
+    "deviceId",
+    "subFolder"
+  ]
+}

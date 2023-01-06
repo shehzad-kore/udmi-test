@@ -1,0 +1,106 @@
+#!/bin/bash -e
+
+ROOT_DIR=$(dirname $0)/..
+cd $ROOT_DIR
+
+if [[ $# != 1 ]]; then
+    echo Usage: $0 PROJECT_ID
+    false
+fi
+
+project_id=$1
+shift
+
+if [[ -n `which rot13` ]]; then
+   # Project is provided as a secret, so obfuscate to prevent redactions in server-side logs.
+   echo 'Using target project (rot13):' $(echo $project_id | rot13)
+else
+   echo 'Using target project:' $project_id
+fi
+
+site_path=sites/udmi_site_model
+device_id=AHU-1 # Static device for testing. Needs to be different than other tests scripts so as not to conflict during CI.
+mkdir -p out
+
+serial_no=sequencer-$RANDOM
+echo Using pubber with serial $serial_no
+
+site_config=$site_path/cloud_iot_config.json
+cloud_region=$(jq -r .cloud_region $site_config)
+registry_id=$(jq -r .registry_id $site_config)
+
+PUBBER_OUT=pubber.out
+rm -f $PUBBER_OUT.*
+
+echo Killing running pubber instances...
+ps ax | fgrep pubber | fgrep java | awk '{print $1}' | xargs kill || true
+
+bin/reset_config $site_path $project_id $device_id
+
+echo Running pubber with redirectRegistry on timeout
+timeout 3m unbuffer bin/pubber $site_path $project_id $device_id $serial_no redirectRegistry=missing > $PUBBER_OUT.1 2>&1 || true
+
+echo Done with timeout, running pubber in background...
+bin/pubber $site_path $project_id $device_id $serial_no > $PUBBER_OUT.2 2>&1 &
+
+# Wait for initial connection, then reset config to redirect
+sleep 20
+
+cat <<EOF > out/endpoint.json
+{
+  "protocol": "mqtt",
+  "client_id": "projects/$project_id/locations/$cloud_region/registries/reconfigure/devices/$device_id",
+  "hostname": "mqtt.googleapis.com"
+}
+EOF
+
+base64=$(base64 -w 0 out/endpoint.json)
+
+cat <<EOF > out/blobs.json
+{
+  "system": {
+    "mode": "active"
+  },
+  "blobset": {
+    "blobs": {
+      "_iot_endpoint_config": {
+        "phase": "final",
+        "base64": "$base64"
+      }
+    }
+  }
+}
+EOF
+
+out_base=$site_path/devices/$device_id/out
+# Merge JSON files together into new redirect config
+jq -s '.[0] * .[1]' $out_base/generated_config.json out/blobs.json > $out_base/redirect_config.json
+jq '.system.mode = "restart"' $out_base/redirect_config.json > $out_base/restart_config.json
+
+echo New redirection config:
+cat /tmp/${device_id}_config.json
+
+echo bin/reset_config $site_path $project_id $device_id redirect_config.json
+bin/reset_config $site_path $project_id $device_id redirect_config.json
+
+echo Let pubber react to the new configuration...
+sleep 20
+
+echo Restart the system...
+echo bin/reset_config $site_path $project_id $device_id restart_config.json
+bin/reset_config $site_path $project_id $device_id restart_config.json
+
+echo And let it settle for restart...
+sleep 20
+
+# Now test that pubber responds to an later last_start config (to trigger automatic shutdown)
+now_date=$(python3 -c 'import datetime; print(datetime.datetime.utcnow().isoformat() + "Z")')
+echo Setting last_start time to $now_date for pubber shutdown...
+jq ".system.last_start = \"$now_date\"" $out_base/redirect_config.json > $out_base/shutdown_config.json
+echo bin/reset_config $site_path $project_id $device_id shutdown_config.json
+bin/reset_config $site_path $project_id $device_id shutdown_config.json
+
+echo And let it settle for last start...
+sleep 20
+
+echo Done with redirect test.

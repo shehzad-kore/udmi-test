@@ -1,0 +1,66 @@
+#!/bin/bash -e
+#
+# Command line wrapper to create a config file, and pass off
+# to sequence looper for complete sequence run.
+#
+
+ROOT_DIR=$(realpath $(dirname $0)/..)
+TEST_LOG=/tmp/test_log.txt
+log_level=INFO
+
+if [[ $1 == '-v' ]]; then
+    log_level=DEBUG
+    shift
+fi
+
+if [[ $1 == '-v' || $1 == '-vv' ]]; then
+    log_level=TRACE
+    shift
+fi
+
+if [[ $# < 3 ]]; then
+    echo Usage: $0 SITE_PATH PROJECT_ID DEVICE_ID [SERIAL_NO] [TEST_NAMES...]
+    false
+fi
+
+site_path=$(realpath $1)
+project_id=$2
+device_id=$3
+shift 3
+
+serial_no=${1:-//}
+shift || true
+
+test_names="$@"
+
+cd $ROOT_DIR
+
+echo Writing config to /tmp/validator_config.json:
+cat <<EOF > /tmp/validator_config.json
+{
+  "project_id": "$project_id",
+  "site_model": "$site_path",
+  "device_id": "$device_id",
+  "serial_no": "$serial_no",
+  "log_level": "$log_level",
+  "key_file": "$site_path/validator/rsa_private.pkcs8"
+}
+EOF
+
+cat /tmp/validator_config.json
+echo Running tools version `(cd $ROOT_DIR; git describe)`
+
+bin/loop_sequences $test_names 2>&1 | tee $TEST_LOG
+
+echo
+# Sort by test name (6th field)
+fgrep 'RESULT ' $TEST_LOG | sort -k 6 | tee /tmp/sequencer.out
+
+if [[ `wc -l < /tmp/sequencer.out` -eq 0 ]]; then
+    echo No test results found.
+    exit 1
+fi
+
+bin/check_version
+
+echo SUMMARY `awk '{print $5}' < /tmp/sequencer.out`

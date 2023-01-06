@@ -1,0 +1,33 @@
+<div class="table-controls">
+  <app-search-filter
+    serviceName="DevicesService"
+    [fields]="searchFields"
+    [limit]="15"
+    [handleFilterChange]="filterData"
+  ></app-search-filter>
+  <mat-paginator
+    [length]="totalFilteredCount"
+    [pageSize]="pageSize"
+    [pageIndex]="currentPage"
+    [pageSizeOptions]="pageSizeOptions"
+    (page)="pageChanged($event)"
+    aria-label="Select page"
+  >
+  </mat-paginator>
+</div>
+<mat-table [dataSource]="devices" matSort (matSortChange)="sortData($event)" aria-label="List of devices">
+  <ng-container *ngFor="let columnName of displayedColumns" matColumnDef="{{ columnName }}">
+    <mat-header-cell *matHeaderCellDef mat-sort-header>{{ columnName | capitalize }}</mat-header-cell>
+    <div *ngIf="columnName === 'lastPayload'; else elseBlock">
+      <mat-cell *matCellDef="let element">{{ element[columnName] | date: 'MM/dd/yy h:mm a' }}</mat-cell>
+    </div>
+    <ng-template #elseBlock
+      ><mat-cell *matCellDef="let element">{{ element[columnName] }}</mat-cell></ng-template
+    >
+  </ng-container>
+
+  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+  <a class="link" mat-button *matRowDef="let row; columns: displayedColumns" [routerLink]="row.id">
+    <mat-row></mat-row>
+  </a>
+</mat-table>

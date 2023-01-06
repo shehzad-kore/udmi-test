@@ -1,0 +1,62 @@
+#!/bin/bash -e
+
+ROOT_DIR=$(realpath $(dirname $0)/..)
+
+if (( $# < 4 )); then
+    echo $0 SITE_PATH PROJECT_ID DEVICE_ID SERIAL_NO [options] ...
+    false
+fi
+
+site_path=$1
+project_id=$2
+device_id=$3
+serial_no=$4
+shift 4
+
+if [ ! -f $site_path/cloud_iot_config.json ]; then
+    echo cloud_iot_config.json not found at $site_path
+    false
+fi
+
+echo Cleaning output directory $ROOT_DIR/pubber/out/$serial_no
+rm -rf $ROOT_DIR/pubber/out/$serial_no
+
+echo Building pubber...
+$ROOT_DIR/pubber/bin/build
+
+echo Running tools version `(cd $ROOT_DIR; git describe)`
+
+if (($# == 0)); then  
+    $ROOT_DIR/pubber/bin/run $project_id $site_path $device_id $serial_no
+else
+    declare -A options
+    for option in $*; do
+        if [[ $option == *"="* ]]; then
+            k=$(echo $option | cut -d'=' -f1)
+            v="\"$(echo $option | cut -d'=' -f2)\""
+        else
+            k=$option
+            v=true
+        fi
+        printf -v options_json '%s"%s":%s,' "$options_json" "$k" "$v"
+    done
+    options_json="{${options_json%,}}" 
+
+    registry_id=`jq -r .registry_id $site_path/cloud_iot_config.json`
+    cloud_region=`jq -r .cloud_region $site_path/cloud_iot_config.json`
+    
+    cat <<EOF > /tmp/pubber_config.json
+{
+    "endpoint": {
+      "protocol": "mqtt",
+      "client_id": "projects/$project_id/locations/$cloud_region/registries/$registry_id/devices/$device_id",
+      "hostname": "mqtt.googleapis.com"
+    },
+    "sitePath": "$site_path",
+    "deviceId": "$device_id",
+    "serialNo": "$serial_no",
+    "options": $options_json
+}
+EOF
+    $ROOT_DIR/pubber/bin/run /tmp/pubber_config.json
+fi
