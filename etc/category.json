@@ -1,6 +1,0 @@
-{
-  "$comment": "Auto-generated category mappings from bin/gencode_categories.",
-  "oneOf": [
-    @@ gencode stuff goes here
-    ]
-}
