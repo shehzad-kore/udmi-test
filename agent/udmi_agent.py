@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 
 from udmi.schema import Config, State, BlobBlobsetState, BlobsetState, Common
 from mqtt_manager import MqttManager
@@ -104,6 +105,8 @@ class UdmiAgent:
         self.device_state.blobset.blobs = {}
         self.device_state.blobset.blobs['codebase'] = BlobBlobsetState()
         self.update_state(None, None, None)
+        time.sleep(2)
+        exit()
         self.git_manager.restore()
         self.update_state("steady", self.git_manager.steady(None))
 
